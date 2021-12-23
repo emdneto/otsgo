@@ -4,7 +4,8 @@ import (
 	"github.com/emdneto/otsgo/cmd"
 )
 
-func main() {
+var VERSION string
 
-	cmd.Execute()
+func main() {
+	cmd.Execute(VERSION)
 }

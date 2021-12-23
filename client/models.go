@@ -6,10 +6,13 @@ type Auth struct {
 	Enabled  bool
 }
 
+type StatusRes struct {
+	Status string `json:"status"`
+}
 type AuthYaml struct {
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
-	Enabled  bool   `yaml:"enabled"`
+	Username string `yaml:"otsUser"`
+	Password string `yaml:"otsToken"`
+	//Enabled  bool   `yaml:"OTS_AUTH_ENABLED"`
 }
 
 type ErrorResponse struct {
@@ -19,7 +22,7 @@ type ErrorResponse struct {
 type SecretBody struct {
 	Secret     string
 	Passphrase string
-	Ttl        string
+	Ttl        int
 	Recipient  string
 }
 
@@ -47,7 +50,7 @@ type Secrets []struct {
 	MetadataKey string   `json:"metadata_key"`
 	TTL         int      `json:"ttl"`
 	MetadataTTL int      `json:"metadata_ttl"`
-	SecretTTL   int      `json:"secret_ttl,omitempty"`
+	SecretTTL   int      `json:"secret_ttl"`
 	State       string   `json:"state"`
 	Updated     int      `json:"updated"`
 	Created     int      `json:"created"`

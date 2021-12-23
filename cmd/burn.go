@@ -34,7 +34,6 @@ var burnCmd = &cobra.Command{
 			postBody := client.SecretBody{
 				Secret: secret,
 			}
-			fmt.Println(secret)
 			client.BurnSecret(AuthInfo, postBody)
 		}
 	},

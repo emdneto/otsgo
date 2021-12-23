@@ -23,7 +23,6 @@ import (
 
 	"github.com/emdneto/otsgo/client"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 )
 
@@ -35,25 +34,33 @@ var loginCmd = &cobra.Command{
 	Use:   "login",
 	Short: "Perform basic http auth and store credentials",
 	Run: func(cmd *cobra.Command, args []string) {
+
 		username, _ := cmd.Flags().GetString("username")
 		password, _ := cmd.Flags().GetString("password")
-		res = client.GetStatus(AuthInfo)
-		if res {
-			auth = client.AuthYaml{
+
+		if len(username) != 0 && len(password) != 0 {
+			fmt.Printf("WARNING! Your password will be stored unencrypted in %s\n", "~/.otsgo.yaml")
+			fmt.Printf("\n")
+			fmt.Printf("If you don't want to keep the credentials in the configuration file, use the environment variables like this: \n\nexport OTS_USER=demo; export OTS_TOKEN=demo\n\n")
+			AuthInfo = client.Auth{
 				Username: username,
 				Password: password,
 				Enabled:  true,
 			}
-		} else {
-			auth = client.AuthYaml{
-				Username: "",
-				Password: "",
-				Enabled:  false,
-			}
 		}
-		fmt.Printf("WARNING! Your password will be stored unencrypted in %s\n", viper.ConfigFileUsed())
-		fmt.Printf("\n")
-		fmt.Printf("Login Succeeded\n")
+
+		res = client.Login(AuthInfo)
+		if res {
+			fmt.Printf("Login Succeeded\n")
+			auth = client.AuthYaml{
+				Username: username,
+				Password: password,
+			}
+		} else {
+			fmt.Printf("Login failed\n")
+			return
+		}
+
 		yamlData, err := yaml.Marshal(&auth)
 		if err != nil {
 			fmt.Printf("Error while Marshaling. %v", err)
@@ -63,7 +70,6 @@ var loginCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err)
 		}
-
 		fileName := fmt.Sprintf("%s/.otsgo.yaml", dirname)
 		err = ioutil.WriteFile(fileName, yamlData, 0644)
 		if err != nil {
@@ -74,7 +80,8 @@ var loginCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(loginCmd)
-	loginCmd.PersistentFlags().StringP("username", "u", "", "Username")
-	loginCmd.PersistentFlags().StringP("password", "p", "", "Password")
-	//loginCmd.PersistentFlags().BoolP("password-stdin", "", false, "Take the API Token from stdin")
+	loginCmd.PersistentFlags().StringP("username", "u", "", "OTS Username")
+	loginCmd.PersistentFlags().StringP("password", "p", "", "OTS Token")
+	loginCmd.PersistentFlags().BoolP("password-stdin", "", false, "Take the API Token from stdin")
+
 }
