@@ -5,25 +5,46 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/olekukonko/tablewriter"
+	"golang.design/x/clipboard"
 )
 
 var SecRes SecretResponse
 var BurnSecRes BurnSecretResponse
 var RecentSec Secrets
+var StsRes StatusRes
 
-func GetStatus(a Auth) bool {
+func Login(a Auth) bool {
 	uri := fmt.Sprintf("%s/%s/%s", BASE_URI, API_VERSION, ENDPOINTS["status"])
-	_, err := AgnosticRequest(a, uri, "GET", bytes.NewBufferString(""))
+	body, err := AgnosticRequest(a, uri, "GET", bytes.NewBufferString(""))
+
 	if err != nil {
 		fmt.Println(err)
 		return false
 	}
+	if err := json.Unmarshal(body, &StsRes); err != nil {
+		fmt.Println(err)
+	}
+
+	return true
+}
+func GetStatus(a Auth) bool {
+	uri := fmt.Sprintf("%s/%s/%s", BASE_URI, API_VERSION, ENDPOINTS["status"])
+	body, err := AgnosticRequest(a, uri, "GET", bytes.NewBufferString(""))
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+	if err := json.Unmarshal(body, &StsRes); err != nil {
+		fmt.Println(err)
+	}
+
+	data := []string{StsRes.Status}
+	header := []string{"Status"}
+	OutputTable(header, data)
 
 	return true
 }
@@ -38,7 +59,7 @@ func CreateSecret(a Auth, b SecretBody, g bool) bool {
 
 	data := url.Values{}
 	data.Set("secret", b.Secret)
-	data.Set("ttl", b.Ttl)
+	data.Set("ttl", strconv.Itoa(b.Ttl))
 	data.Set("recipient", b.Recipient)
 	data.Set("passphrase", b.Passphrase)
 
@@ -47,13 +68,21 @@ func CreateSecret(a Auth, b SecretBody, g bool) bool {
 		fmt.Println(err)
 		return false
 	}
-
+	timeNow := time.Now().Unix()
 	if err := json.Unmarshal(body, &SecRes); err != nil {
 		fmt.Println(err)
 	}
-	fmt.Printf("Share this link: %s/secret/%s\n", HOST, SecRes.SecretKey)
-	fmt.Printf("Metatada (DO NOT share this): %s/private/%s\n", HOST, SecRes.MetadataKey)
-	fmt.Println(SecRes.SecretKey)
+	total := timeNow + int64(SecRes.SecretTtl)
+	expiresIn := fmt.Sprint(time.Unix(int64(total), 0))
+	secKeyUrl := fmt.Sprintf("%s/secret/%s\n", HOST, SecRes.SecretKey)
+	privKeyUrl := fmt.Sprintf("%s/private/%s\n", HOST, SecRes.MetadataKey)
+	templateData := []string{SecRes.Custid, expiresIn, secKeyUrl, privKeyUrl}
+	header := []string{"User", "Expires in", "Share this link", "Private Metadata (DO NOT share this)"}
+	fmt.Printf("\nShareable link copied to clipboard!\n")
+	fmt.Print("\n")
+	clipboard.Write(clipboard.FmtText, []byte(secKeyUrl))
+	clipboard.Read(clipboard.FmtText)
+	OutputTable(header, templateData)
 
 	return true
 }
@@ -111,14 +140,20 @@ func GetMetadata(a Auth, b SecretBody) bool {
 	if err := json.Unmarshal(body, &SecRes); err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(SecRes)
+	templateData := []string{SecRes.Custid,
+		SecRes.MetadataKey,
+		fmt.Sprint(SecRes.MetadataTtl),
+		fmt.Sprint(SecRes.SecretTtl),
+		SecRes.State,
+		fmt.Sprint(SecRes.Updated),
+		fmt.Sprint(SecRes.Created),
+		fmt.Sprint(SecRes.Recipient)}
+	header := []string{"Custid", "Metadata Key", "Metadata TTL", "Secret TTL", "State", "Updated", "Created", "Recipient"}
+	OutputTable(header, templateData)
 
 	return true
 }
 
-func OutputTable([][]string) {
-	//
-}
 func GetRecent(a Auth, b SecretBody) bool {
 	uri := fmt.Sprintf("%s/%s/%s/recent", BASE_URI, API_VERSION, ENDPOINTS["getrecent"])
 	//data := url.Values{}
@@ -139,12 +174,8 @@ func GetRecent(a Auth, b SecretBody) bool {
 
 		data = append(data, []string{el.Custid, el.MetadataKey, strconv.Itoa(el.MetadataTTL), strconv.Itoa(el.SecretTTL), el.State, updated_unix, created_unix, fmt.Sprint(el.Recipient)})
 	}
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Custid", "Metadata Key", "Metadata TTL", "Secret TTL", "State", "Updated", "Created", "Recipient"})
-	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
-	table.SetCenterSeparator("|")
-	table.AppendBulk(data) // Add Bulk Data
-	table.Render()
+	header := []string{"Custid", "Metadata Key", "Metadata TTL", "Secret TTL", "State", "Updated", "Created", "Recipient"}
+	OutputBulkTable(header, data)
 
 	fmt.Println(len(RecentSec))
 
