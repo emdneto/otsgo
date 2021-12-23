@@ -28,6 +28,7 @@ You may download otsgo binary from the [latest releases on Github](https://githu
 
 ```
 
+
 # Using otsgo CLI
 
 ## Overview 
