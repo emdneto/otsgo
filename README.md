@@ -1,6 +1,6 @@
 # OTS Go client
 
-otsgo is a simple client for [One-Time Secret](https://onetimesecret.com/) written in Go. 
+otsgo is a simple CLI and API client for [One-Time Secret](https://onetimesecret.com/) written in Go. 
 
 ## Features
 
@@ -28,7 +28,7 @@ You may download otsgo binary from the [latest releases on Github](https://githu
 
 ```
 
-# Usage as CLI
+# Using otsgo CLI
 
 ## Overview 
 ```
