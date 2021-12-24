@@ -18,7 +18,7 @@ jobs:
             goos: windows 
     steps:
     - name: Install packages
-      run: sudo apt update && sudo apt install libx11-dev
+      run: sudo apt update && sudo apt install libx11-dev xhk
     - uses: actions/checkout@v2
     - uses: wangyoucao577/go-release-action@v1.22
       with:
