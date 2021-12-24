@@ -20,8 +20,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - uses: wangyoucao577/go-release-action@v1.22
-      env: 
-        tag: $GITHUB_REF_NAME
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         goos: ${{ matrix.goos }}
@@ -30,5 +28,5 @@ jobs:
         goversion: "https://dl.google.com/go/go1.17.3.linux-amd64.tar.gz"
         project_path: "."
         binary_name: "ots"
-        ldflags: -s -w -X main.VERSION=$tag
+        ldflags: -s -w -X main.VERSION=${{github.ref_name}}
         extra_files: LICENSE README.md
