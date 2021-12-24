@@ -32,7 +32,6 @@ func AgnosticRequest(a Auth, uri string, m string, b io.Reader) ([]byte, error) 
 	}
 
 	if a.Enabled {
-		fmt.Printf("Auth enabled\n")
 		req.SetBasicAuth(a.Username, a.Password)
 	}
 
