@@ -10,24 +10,20 @@ otsgo is a simple CLI and API client for [One-Time Secret](https://onetimesecret
 
 # Quickstart
 
-## Getting otsgo from Webinstall (preferable way)
+## Getting otsgo from Webinstall
 
 ```
+curl -sS https://webi.sh/ots | sh
 ```
 
-## Getting otsgo as Go package
+## Getting otsgo from go install
 
 ```
-$ go get github.com/emdneto/otsgo
+$ go install github.com/emdneto/otsgo@latest
 ```
 
 ## Getting otsgo from binary
 You may download otsgo binary from the [latest releases on Github](https://github.com/emdneto/otsgo/releases/latest).
-
-```bash
-
-```
-
 
 # Using otsgo CLI
 
@@ -69,7 +65,6 @@ $ ots status
 ```
 
 ## Share Secrets 
-otsgo copies the shareable secret link to the clipboard.
 
 ```
 $ ots share -h
