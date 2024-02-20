@@ -8,8 +8,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"golang.design/x/clipboard"
 )
 
 var SecRes SecretResponse
@@ -78,10 +76,6 @@ func CreateSecret(a Auth, b SecretBody, g bool) bool {
 	privKeyUrl := fmt.Sprintf("%s/private/%s\n", HOST, SecRes.MetadataKey)
 	templateData := []string{SecRes.Custid, expiresIn, secKeyUrl, privKeyUrl}
 	header := []string{"User", "Expires in", "Share this link", "Private Metadata (DO NOT share this)"}
-	fmt.Printf("\nShareable link copied to clipboard!\n")
-	fmt.Print("\n")
-	clipboard.Write(clipboard.FmtText, []byte(secKeyUrl))
-	clipboard.Read(clipboard.FmtText)
 	OutputTable(header, templateData)
 
 	return true
