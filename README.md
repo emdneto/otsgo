@@ -165,8 +165,3 @@ alias osgs="ots share secret -g"
 alias ogs="ots get secret"
 alias obs="ots burn secret"
 ```
-
-# License
-MIT  License
-
-See LICENSE to see the full text.
