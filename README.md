@@ -59,9 +59,8 @@ Use "ots [command] --help" for more information about a command.
 ```
 $ ots status
 
-| STATUS  |
-|---------|
-| nominal |
+STATUS 	TIMESTAMP
+nominal	1709507672
 ```
 
 ## Share Secrets 
@@ -137,6 +136,13 @@ $ ots get meta METADATA_KEY
 ### Get recent secrets (requires auth)
 ```
 $ ots get recent
+
+USER                    STATE           EXPIRES                 EXPIRED METADATA                        PASSHPHRASE     CREATED                 SENT    TTL       
+anon                    viewed          2024-03-10 20:13:45     false   oz3bp2asyt2mo3xk0w4ddiveg0yhhor false           2024-03-03 20:13:45     []      167h58m13s
+demouser12345@demo.com  received        2024-03-10 20:01:40     false   drgsrmf8avh5mv8mqlj2sgvi6tsqwz9 false           2024-03-03 20:01:40     []      0s        
+demouser12345@demo.com  received        2024-03-10 16:17:01     false   58sqvdaqwbh2b0gx1koru0baiid894a true            2024-03-03 16:17:01     []      0s        
+demouser12345@demo.com  received        2024-03-10 14:57:02     false   5s0onh5cyd2e1dsa5qmsm2afq91d3g0 false           2024-03-03 14:57:02     []      0s        
+demouser12345@demo.com  received        2024-03-10 14:55:23     false   nh8eqt08te7gl7jphjg89b7p1s1cetk true            2024-03-03 14:55:23     []      0s        
 ```
 
 ## Authentication
