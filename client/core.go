@@ -3,18 +3,21 @@ package client
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"log"
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
-var SecRes SecretResponse
+var secret Secret
+var secrets Secrets
 var BurnSecRes BurnSecretResponse
-var RecentSec Secrets
 var StsRes StatusRes
+
+var tblheader = []string{"user", "state", "expires", "expired", "metadata", "passhphrase", "created", "sent", "ttl"}
 
 func Login(a Auth) bool {
 	uri := fmt.Sprintf("%s/%s/%s", BASE_URI, API_VERSION, ENDPOINTS["status"])
@@ -41,14 +44,15 @@ func GetStatus(a Auth) bool {
 		fmt.Println(err)
 	}
 
-	data := []string{StsRes.Status}
-	header := []string{"Status"}
-	OutputTable(header, data)
+	// table output
+	tblheader := []string{"Status", "Timestamp"}
+	tbldata := [][]string{{StsRes.Status, fmt.Sprintf("%d", time.Now().Unix())}}
+	fmtTableOutput(tblheader, tbldata)
 
 	return true
 }
 
-func CreateSecret(a Auth, b SecretBody, g bool) bool {
+func CreateSecret(a Auth, b SecretBody, g bool) {
 
 	uri := fmt.Sprintf("%s/%s/%s", BASE_URI, API_VERSION, ENDPOINTS["share"])
 
@@ -65,28 +69,25 @@ func CreateSecret(a Auth, b SecretBody, g bool) bool {
 	body, err := AgnosticRequest(a, uri, "POST", strings.NewReader(data.Encode()))
 	if err != nil {
 		fmt.Println(err)
-		return false
 	}
-	timeNow := time.Now().Unix()
-	if err := json.Unmarshal(body, &SecRes); err != nil {
+
+	if err := json.Unmarshal(body, &secret); err != nil {
 		fmt.Println(err)
 	}
-	total := timeNow + int64(SecRes.SecretTtl)
-	expiresIn := fmt.Sprint(time.Unix(int64(total), 0))
-	secKeyUrl := fmt.Sprintf("%s/secret/%s\n", HOST, SecRes.SecretKey)
-	privKeyUrl := fmt.Sprintf("%s/private/%s\n", HOST, SecRes.MetadataKey)
-	templateData := []string{SecRes.Custid, expiresIn, secKeyUrl, privKeyUrl}
-	header := []string{"User", "Expires in", "Share this link", "Private Metadata (DO NOT share this)"}
-	OutputTable(header, templateData)
+
+	// table output
+	tblheader = []string{"user", "secret", "expires", "metadata", "sent"}
+	tbldata := [][]string{}
+	tbldata = append(tbldata, secret.toNewSecret())
+	fmtTableOutput(tblheader, tbldata)
 
 	if !a.Enabled {
-		if err := WriteHistory(SecRes.MetadataKey); err != nil {
+		if err := writeHistory(secret.MetadataKey); err != nil {
 			fmt.Printf("Error writing entry to file: %s\n", err)
-			return true
 		}
 	}
 
-	return true
+	fmt.Println(secret.secretOtsCmd())
 }
 
 func BurnSecret(a Auth, b SecretBody) bool {
@@ -102,6 +103,7 @@ func BurnSecret(a Auth, b SecretBody) bool {
 	if err := json.Unmarshal(body, &BurnSecRes); err != nil {
 		fmt.Println(err)
 	}
+	// table output
 	fmt.Println(BurnSecRes.State.State)
 
 	return true
@@ -119,15 +121,17 @@ func GetSecret(a Auth, b SecretBody) bool {
 		return false
 	}
 
-	if err := json.Unmarshal(body, &SecRes); err != nil {
+	if err := json.Unmarshal(body, &secret); err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(SecRes.Value)
+
+	// table output
+	fmt.Println(secret.Value)
 
 	return true
 }
 
-func GetMetadata(a Auth, b SecretBody) bool {
+func GetMetadata(a Auth, b SecretBody) {
 	uri := fmt.Sprintf("%s/%s/%s/%s", BASE_URI, API_VERSION, ENDPOINTS["getmetadata"], b.Secret)
 	data := url.Values{}
 
@@ -136,32 +140,80 @@ func GetMetadata(a Auth, b SecretBody) bool {
 	body, err := AgnosticRequest(a, uri, "POST", strings.NewReader(data.Encode()))
 	if err != nil {
 		fmt.Println(err)
-		return false
 	}
 
-	if err := json.Unmarshal(body, &SecRes); err != nil {
+	if err := json.Unmarshal(body, &secret); err != nil {
 		fmt.Println(err)
 	}
-	templateData := []string{SecRes.Custid,
-		SecRes.MetadataKey,
-		fmt.Sprint(SecRes.MetadataTtl),
-		fmt.Sprint(SecRes.SecretTtl),
-		SecRes.State,
-		fmt.Sprint(SecRes.Updated),
-		fmt.Sprint(SecRes.Created),
-		fmt.Sprint(SecRes.Recipient)}
-	header := []string{"Custid", "Metadata Key", "Metadata TTL", "Secret TTL", "State", "Updated", "Created", "Recipient"}
-	OutputTable(header, templateData)
 
-	return true
+	tbldata := [][]string{}
+	tbldata = append(tbldata, secret.toMetadata())
+	fmtTableOutput(tblheader, tbldata)
 }
 
-func GetRecent(a Auth, b SecretBody, h History) {
+func GetRecent(a Auth, b SecretBody) {
 	uri := fmt.Sprintf("%s/%s/%s/recent", BASE_URI, API_VERSION, ENDPOINTS["getrecent"])
-	data := [][]string{}
+	tbldata := [][]string{}
 
 	if !a.Enabled {
 		fmt.Println("WARNING: Unable to locate credentials. You can configure credentials by running ots login.")
+	}
+
+	History, err := loadHistory(50)
+	if err != nil {
+		fmt.Printf("failed loadHistory: %v", err)
+	}
+
+	ch := make(chan Secret, len(History))
+	errorCh := make(chan error)
+	var wg sync.WaitGroup
+
+	get_meta_uri := fmt.Sprintf("%s/%s/%s", BASE_URI, API_VERSION, ENDPOINTS["getmetadata"])
+
+	for _, item := range History {
+		wg.Add(1)
+		uri := fmt.Sprintf("%s/%s", get_meta_uri, item)
+		data := url.Values{}
+		data.Set("METADATA_KEY", item)
+
+		go func(uri string, i string) {
+			defer wg.Done()
+			body, err := AgnosticRequest(a, uri, "POST", strings.NewReader(data.Encode()))
+			if err != nil {
+				if errors.Is(err, errors.New("404 Unknown secret")) || err.Error() == "404 Unknown secret" {
+					return
+				} else {
+					errorCh <- err
+					return
+				}
+			}
+
+			if err := json.Unmarshal(body, &secret); err != nil {
+				errorCh <- fmt.Errorf("failed unmarshalling JSON: %v\nResponse: %s", err, string(body))
+				return
+			}
+
+			ch <- secret
+
+		}(uri, item)
+	}
+	// Close the channel when all goroutines are done
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
+
+	for range History {
+		select {
+		case secret, ok := <-ch:
+			if !ok {
+				break
+			}
+			tbldata = append(tbldata, secret.toMetadata())
+		case err := <-errorCh:
+			fmt.Printf("%v\n", err)
+
+		}
 	}
 
 	if a.Enabled {
@@ -170,49 +222,18 @@ func GetRecent(a Auth, b SecretBody, h History) {
 			fmt.Println(err)
 		}
 
-		if err := json.Unmarshal(body, &RecentSec); err != nil {
+		if err := json.Unmarshal(body, &secrets); err != nil {
 			fmt.Println(err)
 		}
-		for _, el := range RecentSec {
-			updated_unix := fmt.Sprint(time.Unix(int64(el.Updated), 0))
-			created_unix := fmt.Sprint(time.Unix(int64(el.Created), 0))
-
-			data = append(data, []string{el.Custid, el.MetadataKey, strconv.Itoa(el.MetadataTtl), strconv.Itoa(el.SecretTtl), el.State, updated_unix, created_unix, fmt.Sprint(el.Recipient)})
+		for _, secret := range secrets {
+			tbldata = append(tbldata, secret.toMetadata())
 		}
 	}
 
-	ch := make(chan SecretResponse, len(h))
-	errorCh := make(chan error)
-
-	get_meta_uri := fmt.Sprintf("%s/%s/%s", BASE_URI, API_VERSION, ENDPOINTS["getmetadata"])
-
-	for _, item := range h {
-		uri := fmt.Sprintf("%s/%s", get_meta_uri, item)
-		data := url.Values{}
-		data.Set("METADATA_KEY", item)
-
-		go func(uri string) {
-
-			body, err := AgnosticRequest(a, uri, "POST", strings.NewReader(data.Encode()))
-			if err != nil {
-				errorCh <- err
-				log.Printf("Error occurred: %v", err)
-			}
-
-			if err := json.Unmarshal(body, &SecRes); err != nil {
-				errorCh <- err
-				log.Printf("Error occurred: %v", err)
-			}
-			ch <- SecRes
-		}(uri)
+	if len(tbldata) == 0 {
+		fmt.Printf("No secrets found.\n")
+		return
 	}
 
-	for range h {
-		el := <-ch
-		updated_unix := fmt.Sprint(time.Unix(int64(el.Updated), 0))
-		created_unix := fmt.Sprint(time.Unix(int64(el.Created), 0))
-		data = append(data, []string{el.Custid, el.MetadataKey, strconv.Itoa(el.MetadataTtl), strconv.Itoa(el.SecretTtl), el.State, updated_unix, created_unix, fmt.Sprint(el.Recipient)})
-	}
-	header := []string{"Custid", "Metadata Key", "Metadata TTL", "Secret TTL", "State", "Updated", "Created", "Recipient"}
-	OutputBulkTable(header, data)
+	fmtTableOutput(tblheader, tbldata)
 }
