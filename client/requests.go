@@ -11,7 +11,7 @@ import (
 
 var ErrResponse ErrorResponse
 
-var teste = map[string]string{
+var methods = map[string]string{
 	"GET":  http.MethodGet,
 	"POST": http.MethodPost,
 }
@@ -19,7 +19,7 @@ var teste = map[string]string{
 func AgnosticRequest(a Auth, uri string, m string, b io.Reader) ([]byte, error) {
 	client := http.Client{Timeout: 5 * time.Second}
 
-	method := teste[m]
+	method := methods[m]
 
 	body := b
 	if method == "GET" {
@@ -46,8 +46,6 @@ func AgnosticRequest(a Auth, uri string, m string, b io.Reader) ([]byte, error) 
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	//fmt.Printf("%d - %s\n", res.StatusCode, string(resBody))
 
 	if res.StatusCode != 200 {
 		if err := json.Unmarshal(resBody, &ErrResponse); err != nil {

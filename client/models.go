@@ -6,6 +6,8 @@ type Auth struct {
 	Enabled  bool
 }
 
+type History []string
+
 type StatusRes struct {
 	Status string `json:"status"`
 }
@@ -49,8 +51,8 @@ type Secrets []struct {
 	Custid      string   `json:"custid"`
 	MetadataKey string   `json:"metadata_key"`
 	TTL         int      `json:"ttl"`
-	MetadataTTL int      `json:"metadata_ttl"`
-	SecretTTL   int      `json:"secret_ttl"`
+	MetadataTtl int      `json:"metadata_ttl"`
+	SecretTtl   int      `json:"secret_ttl"`
 	State       string   `json:"state"`
 	Updated     int      `json:"updated"`
 	Created     int      `json:"created"`

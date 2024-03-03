@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/url"
 	"strconv"
 	"strings"
@@ -78,6 +79,13 @@ func CreateSecret(a Auth, b SecretBody, g bool) bool {
 	header := []string{"User", "Expires in", "Share this link", "Private Metadata (DO NOT share this)"}
 	OutputTable(header, templateData)
 
+	if !a.Enabled {
+		if err := WriteHistory(SecRes.MetadataKey); err != nil {
+			fmt.Printf("Error writing entry to file: %s\n", err)
+			return true
+		}
+	}
+
 	return true
 }
 
@@ -148,30 +156,63 @@ func GetMetadata(a Auth, b SecretBody) bool {
 	return true
 }
 
-func GetRecent(a Auth, b SecretBody) bool {
+func GetRecent(a Auth, b SecretBody, h History) {
 	uri := fmt.Sprintf("%s/%s/%s/recent", BASE_URI, API_VERSION, ENDPOINTS["getrecent"])
-	//data := url.Values{}
-
-	body, err := AgnosticRequest(a, uri, "GET", strings.NewReader(""))
-	if err != nil {
-		fmt.Println(err)
-		return false
-	}
-
-	if err := json.Unmarshal(body, &RecentSec); err != nil {
-		fmt.Println(err)
-	}
 	data := [][]string{}
-	for _, el := range RecentSec {
+
+	if !a.Enabled {
+		fmt.Println("WARNING: Unable to locate credentials. You can configure credentials by running ots login.")
+	}
+
+	if a.Enabled {
+		body, err := AgnosticRequest(a, uri, "GET", strings.NewReader(""))
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		if err := json.Unmarshal(body, &RecentSec); err != nil {
+			fmt.Println(err)
+		}
+		for _, el := range RecentSec {
+			updated_unix := fmt.Sprint(time.Unix(int64(el.Updated), 0))
+			created_unix := fmt.Sprint(time.Unix(int64(el.Created), 0))
+
+			data = append(data, []string{el.Custid, el.MetadataKey, strconv.Itoa(el.MetadataTtl), strconv.Itoa(el.SecretTtl), el.State, updated_unix, created_unix, fmt.Sprint(el.Recipient)})
+		}
+	}
+
+	ch := make(chan SecretResponse, len(h))
+	errorCh := make(chan error)
+
+	get_meta_uri := fmt.Sprintf("%s/%s/%s", BASE_URI, API_VERSION, ENDPOINTS["getmetadata"])
+
+	for _, item := range h {
+		uri := fmt.Sprintf("%s/%s", get_meta_uri, item)
+		data := url.Values{}
+		data.Set("METADATA_KEY", item)
+
+		go func(uri string) {
+
+			body, err := AgnosticRequest(a, uri, "POST", strings.NewReader(data.Encode()))
+			if err != nil {
+				errorCh <- err
+				log.Printf("Error occurred: %v", err)
+			}
+
+			if err := json.Unmarshal(body, &SecRes); err != nil {
+				errorCh <- err
+				log.Printf("Error occurred: %v", err)
+			}
+			ch <- SecRes
+		}(uri)
+	}
+
+	for range h {
+		el := <-ch
 		updated_unix := fmt.Sprint(time.Unix(int64(el.Updated), 0))
 		created_unix := fmt.Sprint(time.Unix(int64(el.Created), 0))
-
-		data = append(data, []string{el.Custid, el.MetadataKey, strconv.Itoa(el.MetadataTTL), strconv.Itoa(el.SecretTTL), el.State, updated_unix, created_unix, fmt.Sprint(el.Recipient)})
+		data = append(data, []string{el.Custid, el.MetadataKey, strconv.Itoa(el.MetadataTtl), strconv.Itoa(el.SecretTtl), el.State, updated_unix, created_unix, fmt.Sprint(el.Recipient)})
 	}
 	header := []string{"Custid", "Metadata Key", "Metadata TTL", "Secret TTL", "State", "Updated", "Created", "Recipient"}
 	OutputBulkTable(header, data)
-
-	fmt.Println(len(RecentSec))
-
-	return true
 }

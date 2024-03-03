@@ -46,7 +46,6 @@ var GetMetadataCmd = &cobra.Command{
 			postBody := client.SecretBody{
 				Secret: secret,
 			}
-			fmt.Println(secret)
 			client.GetMetadata(AuthInfo, postBody)
 		}
 	},
@@ -56,8 +55,12 @@ var GetRecentCmd = &cobra.Command{
 	Use:   "recent",
 	Short: "Retreive a list of recent metadata.",
 	Run: func(cmd *cobra.Command, args []string) {
-		client.GetRecent(AuthInfo, client.SecretBody{})
-
+		// history loading
+		History, err := client.LoadHistory(10)
+		if err != nil {
+			fmt.Println(err)
+		}
+		client.GetRecent(AuthInfo, client.SecretBody{}, History)
 	},
 }
 
@@ -66,14 +69,4 @@ func init() {
 	getCmd.AddCommand(GetMetadataCmd)
 	getCmd.AddCommand(GetRecentCmd)
 	rootCmd.AddCommand(getCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// getCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// getCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
