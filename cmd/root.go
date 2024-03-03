@@ -59,35 +59,31 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
+	home, err := os.UserHomeDir()
+	cobra.CheckErr(err)
+
+	viper.AddConfigPath(home)
+	viper.SetConfigType("yaml")
+
 	if cfgFile != "" {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
-		// Find home directory.
-		home, err := os.UserHomeDir()
-		cobra.CheckErr(err)
-
-		// Search config in home directory with name ".otsgo" (without extension).
-		viper.AddConfigPath(home)
-		viper.SetConfigType("yaml")
 		viper.SetConfigName(".otsgo")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
 
-	var AuthEnabled bool = false
+	var AuthEnabled bool = false // default to false
 	var AuthUsername string
 	var AuthPassword string
 
 	AuthUsername = viper.GetString("OTS_USER")
 	AuthPassword = viper.GetString("OTS_TOKEN")
 
-	//LoginCmdUsername, _ := loginCmd.Flags().GetString("username")
-	//LoginCmdPassword, _ := loginCmd.Flags().GetString("password")
-
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		//fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 		AuthUsername = viper.GetString("otsUser")
 		AuthPassword = viper.GetString("otsToken")
 
@@ -101,5 +97,4 @@ func initConfig() {
 			Enabled:  AuthEnabled,
 		}
 	}
-
 }
