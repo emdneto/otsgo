@@ -55,12 +55,7 @@ var GetRecentCmd = &cobra.Command{
 	Use:   "recent",
 	Short: "Retreive a list of recent metadata.",
 	Run: func(cmd *cobra.Command, args []string) {
-		// history loading
-		History, err := client.LoadHistory(10)
-		if err != nil {
-			fmt.Println(err)
-		}
-		client.GetRecent(AuthInfo, client.SecretBody{}, History)
+		client.GetRecent(AuthInfo, client.SecretBody{})
 	},
 }
 

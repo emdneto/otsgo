@@ -11,25 +11,26 @@ import (
 	"github.com/olekukonko/tablewriter"
 )
 
-func OutputBulkTable(h []string, d [][]string) {
+func fmtTableOutput(header []string, data [][]string) {
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader(h)
+	table.SetHeader(header)
 	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
-	table.SetCenterSeparator("|")
-	table.AppendBulk(d) // Add Bulk Data
+	table.SetAutoWrapText(false)
+	table.SetAutoFormatHeaders(true)
+	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+	table.SetCenterSeparator("")
+	table.SetColumnSeparator("")
+	table.SetRowSeparator("")
+	table.SetHeaderLine(false)
+	//table.EnableBorder(false)
+	table.SetTablePadding("\t") // pad with tabs
+	table.SetNoWhiteSpace(true)
+	table.AppendBulk(data) // Add Bulk Data
 	table.Render()
 }
 
-func OutputTable(h []string, d []string) {
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader(h)
-	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
-	table.SetCenterSeparator("|")
-	table.Append(d)
-	table.Render()
-}
-
-func LoadHistory(limit int) (History, error) {
+func loadHistory(limit int) (History, error) {
 	var history History
 
 	home, err := os.UserHomeDir()
@@ -40,8 +41,7 @@ func LoadHistory(limit int) (History, error) {
 	file, err := os.Open(filepath.Join(home, ".ots_history"))
 
 	if err != nil {
-		fmt.Printf("Error opening history file: %s\n", err)
-		return nil, err
+		return nil, fmt.Errorf("opening history file: %v", err)
 	}
 	defer file.Close()
 
@@ -53,17 +53,34 @@ func LoadHistory(limit int) (History, error) {
 		// Split the line into timestamp and key
 		parts := strings.Split(line, ";")
 		if len(parts) != 2 {
-			fmt.Printf("Invalid line format: %s\n", line)
+			return nil, fmt.Errorf("invalid line format: %v", err)
+		}
+
+		entry := strings.TrimSpace(parts[1])
+		if len(entry) == 0 {
 			continue
 		}
-		entry := strings.TrimSpace(parts[1])
 		history = append(history, entry)
+		// to do check expired entries to not load
+		// timeNow := time.Now()
+		// strTimestamp, err := strconv.ParseInt(parts[0], 10, 64)
+		// if err != nil {
+		// 	fmt.Printf("Error converting string to int: %v\n", err)
+		// }
+		// timestamp := time.Unix(strTimestamp, 0)
+
+		// expired := timeNow.Before(timestamp)
+
+		// if !expired {
+		// 	history = append(history, entry)
+		// }
+
 	}
 
 	if err := scanner.Err(); err != nil {
-		fmt.Printf("Error reading history file: %s\n", err)
-		return nil, err
+		return nil, fmt.Errorf("reading history file: %v", err)
 	}
+
 	if len(history) >= limit {
 		history = history[len(history)-limit:]
 	}
@@ -72,7 +89,7 @@ func LoadHistory(limit int) (History, error) {
 
 }
 
-func WriteHistory(entry string) error {
+func writeHistory(entry string) error {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		fmt.Printf("error getting homedir: %s\n", err)
