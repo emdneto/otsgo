@@ -139,7 +139,8 @@ func GetMetadata(a Auth, b SecretBody) {
 
 	body, err := AgnosticRequest(a, uri, "POST", strings.NewReader(data.Encode()))
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf("Error: %v", err)
+		return
 	}
 
 	if err := json.Unmarshal(body, &secret); err != nil {
