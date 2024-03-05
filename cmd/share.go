@@ -29,6 +29,11 @@ var shareCmd = &cobra.Command{
 		pp, _ := cmd.Flags().GetString("passphrase")
 		reci, _ := cmd.Flags().GetString("recipient")
 		ttl, _ := cmd.Flags().GetInt("ttl")
+
+		if len(secret) > 0 {
+			gen = false
+		}
+
 		postBody := client.SecretBody{
 			Secret:     secret,
 			Passphrase: pp,
@@ -47,5 +52,5 @@ func init() {
 	shareCmd.PersistentFlags().StringP("recipient", "r", "", "an email address. We will send a friendly email containing the secret link (NOT the secret itself).")
 	shareCmd.PersistentFlags().IntP("ttl", "t", 604800, "the maximum amount of time, in seconds, that the secret should survive (i.e. time-to-live). Once this time expires, the secret will be deleted and not recoverable.")
 	shareCmd.Flags().BoolP("from-stdin", "f", false, "Read from stdin")
-	shareCmd.Flags().BoolP("generate", "g", false, "Generate a short, unique secret. This is useful for temporary passwords, one-time pads, salts, etc.")
+	shareCmd.Flags().BoolP("generate", "g", true, "Generate a short, unique secret. This is useful for temporary passwords, one-time pads, salts, etc.")
 }
