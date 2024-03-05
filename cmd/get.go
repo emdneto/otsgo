@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/emdneto/otsgo/client"
 	"github.com/spf13/cobra"
 )
@@ -11,43 +9,31 @@ import (
 var getCmd = &cobra.Command{
 	Use:   "get",
 	Short: "Get secret, metadata or recent",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Error: must also specify a resource like secret, meta or recent")
-	},
+	Args:  cobra.MinimumNArgs(1),
 }
 
 var GetSecretCmd = &cobra.Command{
-	Use:   "secret",
-	Short: "Retrieve a Secret",
+	Use:   "secret [secret]",
+	Short: "Retrieve a Secret value",
+	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) > 1 {
-			fmt.Println("Too many arguments. You can only have one which is the secret URL or SECRET_KEY")
-		} else {
-			secret := args[0]
-			pp, _ := cmd.Flags().GetString("passphrase")
-			postBody := client.SecretBody{
-				Secret:     secret,
-				Passphrase: pp,
-			}
-			client.GetSecret(AuthInfo, postBody)
+		secret := args[0]
+		pp, _ := cmd.Flags().GetString("passphrase")
+		postBody := client.SecretBody{
+			Secret:     secret,
+			Passphrase: pp,
 		}
-
+		client.GetSecret(AuthInfo, postBody)
 	},
 }
-
 var GetMetadataCmd = &cobra.Command{
-	Use:   "meta",
+	Use:   "meta [key]",
 	Short: "Retrieve secret associated metadata",
+	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) > 1 {
-			fmt.Println("Too many arguments. You can only have one which is the METADATA_KEY.")
-		} else {
-			secret := args[0]
-			postBody := client.SecretBody{
-				Secret: secret,
-			}
-			client.GetMetadata(AuthInfo, postBody)
-		}
+		secret := args[0]
+		postBody := client.SecretBody{Secret: secret}
+		client.GetMetadata(AuthInfo, postBody)
 	},
 }
 
