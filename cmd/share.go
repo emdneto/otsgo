@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"os"
 
-	"github.com/emdneto/otsgo/client"
+	"github.com/emdneto/ots/client"
 	"github.com/spf13/cobra"
 )
 

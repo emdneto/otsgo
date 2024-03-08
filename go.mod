@@ -1,6 +1,6 @@
-module github.com/emdneto/otsgo
+module github.com/emdneto/ots
 
-go 1.17
+go 1.22
 
 require (
 	github.com/olekukonko/tablewriter v0.0.5

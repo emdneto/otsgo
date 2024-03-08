@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/emdneto/otsgo/cmd"
+	"github.com/emdneto/ots/cmd"
 )
 
 var VERSION string
