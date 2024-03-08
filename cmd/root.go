@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/emdneto/otsgo/client"
+	"github.com/emdneto/ots/client"
 	"github.com/spf13/cobra"
 
 	"github.com/spf13/viper"

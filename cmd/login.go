@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/emdneto/otsgo/client"
+	"github.com/emdneto/ots/client"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 )
